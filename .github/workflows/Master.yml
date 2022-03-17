@@ -35,4 +35,6 @@ jobs:
       - name: Build
         working-directory: wfos_ics
         run: |
-          sbt compile
+          sbtn clean
+          sbtn scalafmtCheck
+          sbtn compile
