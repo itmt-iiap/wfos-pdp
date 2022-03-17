@@ -1,2 +1,6 @@
+.bsp
 *.class
 *.log
+target
+.history
+a.out

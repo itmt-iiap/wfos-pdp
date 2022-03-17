@@ -26,7 +26,7 @@ class GrxassemblyHandlers(ctx: ActorContext[TopLevelActorMessage], cswCtx: CswCo
   import cswCtx._
   implicit val ec: ExecutionContextExecutor = ctx.executionContext
   private val log                           = loggerFactory.getLogger
-  private val prefix: Prefix                        = cswCtx.componentInfo.prefix
+  private val prefix: Prefix                = cswCtx.componentInfo.prefix
 
   override def initialize(): Unit = {
     log.info(s"Assembly: $prefix initialize")
