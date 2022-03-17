@@ -1,36 +1,37 @@
-# This is a basic workflow to help you get started with Actions
-
 name: master
 
 # Controls when the workflow will run
 on:
   # Triggers the workflow on push or pull request events but only for the main branch
-  push:
-    branches: [ main ]
   pull_request:
     branches: [ main ]
+  push:
+    branches: [ main ]
+    paths:
+      - wfos_ics/**
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+      - uses: coursier/setup-action@v1.2.0-M2
+        with:
+          jvm: 11
+          apps: sbt sbtn
+      - uses: coursier/cache-action@v5
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Install Redis
+        run: sudo apt-get install redis-server
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Install Kotlin
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          curl -s https://get.sdkman.io | bash
+          source "/home/runner/.sdkman/bin/sdkman-init.sh"
+          sdk install kotlin
+          sudo ln -s $(which kotlinc) /usr/local/bin/kotlinc
+      - name: Build
+        working-directory: wfos_ics
+        run: |
+          sbt compile
