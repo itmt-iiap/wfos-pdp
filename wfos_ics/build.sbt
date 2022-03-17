@@ -27,6 +27,7 @@ lazy val `wfos-wfos-icsdeploy` = project
     `wfos-grxassembly`,
     `wfos-linearhcd`
   )
+  .enablePlugins(CswBuildInfo)
   .settings(
     libraryDependencies ++= Dependencies.WfosIcsDeploy
   )
