@@ -9,6 +9,7 @@ on:
     branches: [ main ]
     paths:
       - wfos_ics/**
+      - '.github/workflows/Master.yml'
 
 jobs:
   build:
