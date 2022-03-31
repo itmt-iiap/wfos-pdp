@@ -1,6 +1,11 @@
 .bsp
-*.class
-*.log
-target
-.history
+.target
 a.out
+ignore
+target
+*.log
+tmp
+.history
+.idea
+*.rdb
+.project
