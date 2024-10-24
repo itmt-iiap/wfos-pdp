@@ -23,6 +23,13 @@ object Dependencies {
     Libs.`junit-4-13` % Test,
   )
 
+  val lgmhcd = Seq(
+    CSW.`csw-framework`,
+    CSW.`csw-testkit` % Test,
+    Libs.`scalatest` % Test,
+    Libs.`junit-4-13` % Test,
+  )
+
   val WfosIcsDeploy = Seq(
     CSW.`csw-framework`,
     CSW.`csw-testkit` % Test

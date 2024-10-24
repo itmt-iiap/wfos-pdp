@@ -23,7 +23,8 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 // import scala.util.{Success, Failure}
 import wfos.lgriphcd.LgripInfo
 import wfos.rgriphcd.RgripInfo
-import wfos.bgrxassembly.components.{RgripHcd, LgripHcd}
+import wfos.lgmhcd.LgmInfo
+import wfos.bgrxassembly.components.{RgripHcd, LgripHcd, Lgmhcd}
 import csw.params.events.{EventKey, EventName}
 
 import akka.util.Timeout
@@ -49,9 +50,10 @@ class BgrxassemblyHandlers(ctx: ActorContext[TopLevelActorMessage], cswCtx: CswC
   // private var hcdLocation: AkkaLocation     = _
   private var rgripHcdCS: Option[CommandService] = None
   private var lgripHcdCS: Option[CommandService] = None
+  private var lgmHcdCS: Option[CommandService]   = None
 
   private val rgripHcd: RgripHcd = new RgripHcd()
-  // private val lgripHcd: LgripHcd = new LgripHcd()
+  // private val lgmHcd: LgmHcd     = new LgmHcd()
 
   implicit val timeout: Timeout = Timeout(5.seconds)
 
@@ -61,6 +63,7 @@ class BgrxassemblyHandlers(ctx: ActorContext[TopLevelActorMessage], cswCtx: CswC
 
   override def initialize(): Unit = {
     log.info("Initializing BgrxAssembly")
+    // log.info(s"Printing lgminfo var ${LgmInfo.exchangeAngle}")
   }
 
   override def onLocationTrackingEvent(trackingEvent: TrackingEvent): Unit = { // no need to create CS here
@@ -78,12 +81,17 @@ class BgrxassemblyHandlers(ctx: ActorContext[TopLevelActorMessage], cswCtx: CswC
             log.info("Bgrx Assembly : Creating command service to LgripHcd")
             lgripHcdCS = Some(CommandServiceFactory.make(location))
           }
+
+          case AkkaConnection(ComponentId(Prefix(Subsystem.WFOS, "bgrxAssembly.lgmhcd"), _)) => {
+            log.info("Bgrx Assembly : Creating command service to Lgmhcd")
+            lgmHcdCS = Some(CommandServiceFactory.make(location))
+          }
           case _ => log.info("Unknown HCD encountered")
         }
       }
       case LocationRemoved(connection) => log.info("Location Removed")
     }
-    if (rgripHcdCS != None && lgripHcdCS != None) {
+    if (rgripHcdCS != None && lgripHcdCS != None && lgmHcdCS != None) {
       log.info("Bgrx Assembly : All HCDs are successfully initialized")
       sendCommand(Id("bgrx"))
     }
@@ -147,6 +155,7 @@ class BgrxassemblyHandlers(ctx: ActorContext[TopLevelActorMessage], cswCtx: CswC
 
     val gripperMovementEventKey = EventKey(Prefix("wfos.bgrxAssembly.lgriphcd"), EventName("LgripMovementEvent"))
     val rgripRotationEventKey   = EventKey(Prefix("wfos.bgrxAssembly.rgriphcd"), EventName("RgripRotationEvent"))
+    val lgmMovementEventKey     = EventKey(Prefix("wfos.bgrxAssembly.lgmhcd"), EventName("LgmMovementEvent"))
 
     val subscriber = eventService.defaultSubscriber
     subscriber.subscribeCallback(
@@ -164,6 +173,14 @@ class BgrxassemblyHandlers(ctx: ActorContext[TopLevelActorMessage], cswCtx: CswC
       }
     )
 
+    subscriber.subscribeCallback(
+      Set(lgmMovementEventKey),
+      event => {
+        log.info(s"Received LgmMovement Event: Lgmhcd: Moving grating magazine to${LgmInfo.currentPosition.head}")
+        // Handle the RgripRotationEvent here
+      }
+    )
+
     controlCommand match {
       case setup: Setup => onSetup(runId, setup)
       case _: Observe   => Invalid(runId, WrongCommandTypeIssue("This assembly can't handle observe commands"))
@@ -172,6 +189,7 @@ class BgrxassemblyHandlers(ctx: ActorContext[TopLevelActorMessage], cswCtx: CswC
 
   private def onSetup(runId: Id, setup: Setup): SubmitResponse = {
     moveRgripHcd(runId, setup)
+    // moveLgmHcd(runId)
     Started(runId)
   }
 
@@ -223,7 +241,9 @@ class BgrxassemblyHandlers(ctx: ActorContext[TopLevelActorMessage], cswCtx: CswC
           case completed: Completed => {
             log.info(s"Bgrx Assembly: LgripHcd has moved to exchange position successfully")
             log.info(s"Bgrx Assembly: Execution of command with runId - $runId is completed successfully")
-            commandResponseManager.updateCommand(completed.withRunId(runId))
+            // commandResponseManager.updateCommand(completed.withRunId(runId))
+
+            moveLgmHcd(runId)
           }
 
           case error: Invalid => {
@@ -237,6 +257,41 @@ class BgrxassemblyHandlers(ctx: ActorContext[TopLevelActorMessage], cswCtx: CswC
       case None => {
         log.error("Bgrx Assembly : Rgrip Hcd is not available. Failed to create an instance of command service to Rgrip Hcd")
         commandResponseManager.updateCommand(Invalid(runId, RequiredHCDUnavailableIssue("Rgrip Hcd is not available")))
+      }
+    }
+  }
+
+  private def moveLgmHcd(runId: Id): Unit = {
+    val targetGratingPosition = LgmInfo.targetGratingPositionKey.set(LgmInfo.gratingLinearDistance(2))
+
+    val command: Setup = Setup(sourcePrefix, CommandName("move"), Some(obsId)).madd(targetGratingPosition)
+
+    val connection   = AkkaConnection(ComponentId(Prefix("wfos.bgrxAssembly.lgmhcd"), ComponentType.HCD))
+    val akkaLocation = Await.result(locationService.resolve(connection, 10.seconds), 10.seconds).get
+
+    lgmHcdCS = Some(CommandServiceFactory.make(akkaLocation))
+
+    lgmHcdCS match {
+      case Some(cs) => {
+        val response: Future[SubmitResponse] = cs.submit(command)
+        response.foreach {
+          case completed: Completed => {
+            log.info(s"Bgrx Assembly: LgripHcd has moved to exchange position successfully")
+            log.info(s"Bgrx Assembly: Execution of command with runId - $runId is completed successfully")
+            commandResponseManager.updateCommand(completed.withRunId(runId))
+          }
+
+          case error: Invalid => {
+            log.error(s"Bgrx Assembly: Execution of command with runId- $runId has failed")
+            log.error(s"Bgrx Assembly: ${error.issue}")
+            commandResponseManager.updateCommand(error.withRunId(runId))
+          }
+          case other => commandResponseManager.updateCommand(other.withRunId(runId))
+        }
+      }
+      case None => {
+        log.error("Bgrx Assembly : Lgm Hcd is not available. Failed to create an instance of command service to Lgm Hcd")
+        commandResponseManager.updateCommand(Invalid(runId, RequiredHCDUnavailableIssue("Lgm Hcd is not available")))
       }
     }
   }

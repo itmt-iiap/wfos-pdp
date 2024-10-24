@@ -5,7 +5,7 @@ import csw.params.commands.CommandIssue.{ParameterValueOutOfRangeIssue, MissingK
 import csw.params.core.generics.{Parameter}
 import wfos.lgriphcd.LgripInfo
 
-class LgripHcd extends Hcd {
+class LgripHcd extends Hcd[Int] {
   override def validateParameters(setup: Setup): Either[CommandIssue, Parameter[Int]] = {
     val issueOraccepted = for {
       targetPosition <- setup.get(LgripInfo.targetPositionKey).toRight(MissingKeyIssue("Target Position key not found"))
