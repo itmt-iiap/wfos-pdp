@@ -1,9 +1,9 @@
 
 lazy val aggregatedProjects: Seq[ProjectReference] = Seq(
   `wfos-bgrxassembly`,
-  `wfos-lgripHcd`,
-  `wfos-rgripHcd`,
-  `wfos-lgmhcd`,
+  `wfos-bgrx-lgripHcd`,
+  `wfos-bgrx-rgripHcd`,
+  `wfos-bgrx-lgmhcd`,
   `wfos-wfos-icsdeploy`
 )
 
@@ -14,9 +14,9 @@ lazy val `wfos-ics-root` = project
 // assembly module
 lazy val `wfos-bgrxassembly` = project
   .dependsOn(
-    `wfos-lgripHcd`,
-    `wfos-rgripHcd`,
-    `wfos-lgmhcd`,
+    `wfos-bgrx-lgripHcd`,
+    `wfos-bgrx-rgripHcd`,
+    `wfos-bgrx-lgmhcd`,
     
   )
   .settings(
@@ -24,19 +24,19 @@ lazy val `wfos-bgrxassembly` = project
   )
 
 // hcd module
-lazy val `wfos-lgripHcd` = project
+lazy val `wfos-bgrx-lgripHcd` = project
   .settings(
     libraryDependencies ++= Dependencies.lgripHcd
   )
 
   // hcd module
-lazy val `wfos-rgripHcd` = project
+lazy val `wfos-bgrx-rgripHcd` = project
   .settings(
     libraryDependencies ++= Dependencies.rgripHcd
   )
 
   // hcd module
-lazy val `wfos-lgmhcd` = project
+lazy val `wfos-bgrx-lgmhcd` = project
   .settings(
     libraryDependencies ++= Dependencies.lgmhcd
   )
@@ -45,9 +45,9 @@ lazy val `wfos-lgmhcd` = project
 lazy val `wfos-wfos-icsdeploy` = project
   .dependsOn(
     `wfos-bgrxassembly`,
-    `wfos-lgripHcd`,
-    `wfos-rgripHcd`,
-    `wfos-lgmhcd`
+    `wfos-bgrx-lgripHcd`,
+    `wfos-bgrx-rgripHcd`,
+    `wfos-bgrx-lgmhcd`
 
   )
   .settings(
