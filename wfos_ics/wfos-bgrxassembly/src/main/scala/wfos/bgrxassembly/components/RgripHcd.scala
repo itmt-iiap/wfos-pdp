@@ -5,7 +5,7 @@ import csw.params.commands.CommandIssue.{ParameterValueOutOfRangeIssue, MissingK
 import csw.params.core.generics.{Parameter}
 import wfos.rgriphcd.RgripInfo
 
-class RgripHcd extends Hcd {
+class RgripHcd extends Hcd[Int] {
   override def validateParameters(setup: Setup): Either[CommandIssue, Parameter[Int]] = {
     val issueOraccepted = for {
       bgid        <- setup.get(RgripInfo.gratingModeKey).toRight(MissingKeyIssue("bgid not found"))
